@@ -1,2 +1,2 @@
 # ModeladoSistemasFisicos
-Este repositorio contiene los códigos realizados en la materia de Modelado de Sistemas Físicos 
+Este repositorio contiene material de la materia de Modelado de Sistemas Físicos 
