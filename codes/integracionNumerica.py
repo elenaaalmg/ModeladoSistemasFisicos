@@ -137,7 +137,8 @@ def genericMatrixEuler(A, F, y0, h, tfin):
         t[k + 1] = t[k] + h
         
         linearPart = np.dot(A, Y[:, k])  # parte lineal
-        nonlinearPart = F(Y[:, k]) # parte no lineal
+        nonlinearPart = F(Y[:, k]) if F else 0  # parte no lineal (opcional)
+        # nonlinearPart = F(Y[:, k]) # parte no lineal
         
         Y[:, k + 1] = Y[:, k] + h * (linearPart + nonlinearPart)
     
@@ -182,7 +183,7 @@ if __name__ == '__main__':
               [0, -(kf/m)]]) #matriz de coeficientes 
     F = lambda y: singlePendulum_nonlinear(y, m, l, g) #parte no lineal
     y0 = [np.pi/4, 0.0]
-    t, Y = genericMatrixEuler(A, F, y0, h, tfin)
+    t, Y = genericMatrixEuler(A, None, y0, h, tfin)
     plots.plot(t, Y[0,:], 'Movimiento del Péndulo (Solución Matricial Genérica)')
 
     

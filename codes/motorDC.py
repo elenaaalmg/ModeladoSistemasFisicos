@@ -94,5 +94,5 @@ if __name__ == '__main__':
     ctrl.pzmap(motorTF)
     
     # Obtenemos la respuesta del sistema ante una entrada de tipo escalón
-    y, t = ctrl.step_response(motorTF, T_num = 0.6) # T reduce la escala (eje y)
+    t, y = ctrl.step_response(motorTF, T = 0.6) # T reduce la escala (eje y)
     plots.plot(t, y, 'Step Response')
