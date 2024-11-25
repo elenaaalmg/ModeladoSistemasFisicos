@@ -29,8 +29,8 @@ setpoint = 1
 Kp = 1
 Ki = 1
 Kd = 1
-step = 1000
-lengthGraph = 100
+step = 100
+lengthGraph = 20
 
 ks = 2
 k1 = 2
@@ -106,7 +106,7 @@ def plot_autonomousSys():
     ax_open_loop1.clear()
     ax_open_loop1.plot(t, sol[:, 0], color = 'cyan', label = "x (p53)")
     ax_open_loop1.plot(t, sol[:, 1], color = 'orange', label = "y (Mdm2)")
-    ax_open_loop.set_xlim(0, 100)
+    ax_open_loop1.set_xlim(0, 15)
     ax_open_loop1.set_title("Solución del sistema autónomo")
     ax_open_loop1.grid(color='gray', linestyle='--', linewidth=0.5)
     ax_open_loop1.legend()
@@ -131,7 +131,7 @@ def update_lines_visibility():
     canvas_closed_loop.draw()
 
             
-def update(frame):
+def update(frame):   
     for name in data:
         # Simular datos dinámicos
         if name == "Lazo Cerrado":
@@ -145,30 +145,29 @@ def update(frame):
             data[name] = y
         elif name == "PID":
             y = PIDControl()
-            # data[name] = y
-            data[name] = 0.9 * data[name] + 0.1 * y
+            data[name][frame] = y[frame]
         
         ax_closed_loop.set_ylim(np.min(data[name]) - 0.1, np.max(data[name]) + 0.1)
 
         lines[name].set_ydata(data[name])
     
+    ax_closed_loop.legend()
     canvas_closed_loop.draw()
     return lines.values()
 
 def update_setpoint(*args):
     global setpoint
     setpoint = float(setpoint_entry.get())
+    setpoint_line.set_ydata(np.ones_like(time)*setpoint)
     PIDControl()
 
-def update_pid(*args):
-    global Kp, Kd, Ki
-    Kp = float(Kp_entry.get())
-    Ki = float(Ki_entry.get())
-    Kd = float(Kd_entry.get())
-    PIDControl()
     
 def PIDControl(*args):
-    global setpoint, Kp, Kd, Ki
+    global setpoint
+    
+    Kp = float(Kp_slider.get())
+    Ki = float(Ki_slider.get())
+    Kd = float(Kd_slider.get())
     
     systf = ctrl.ss2tf(sys)
     
@@ -184,6 +183,7 @@ def PIDControl(*args):
     input_signal = reference 
 
     _, output = ctrl.forced_response(system, T=t, U=input_signal)
+    # _, output = ctrl.step_response(system, T=t)
     
     return output
 
@@ -286,58 +286,66 @@ data = {
 
 # Variables para los checkboxes
 control_scheme_vars = {
-    "Lazo Cerrado": ctk.BooleanVar(value = True),
+    "Lazo Cerrado": ctk.BooleanVar(value = False),
     "Retroalimentación de Estados": ctk.BooleanVar(value = False),
     "Con Observador": ctk.BooleanVar(value = False),
     "PID": ctk.BooleanVar(value = False),
     }
 
-# control_scheme_vars = {name: ctk.BooleanVar(value=True) for name in data}
-
 # setpoint
-ctk.CTkLabel(frame_set, text = "Setpoint").grid(row=2, column=0, padx=30, sticky="nsew")
+ctk.CTkLabel(frame_set, text = "Setpoint", font = ("Arial", 12, "bold")).grid(row=2, column=0, padx=30, sticky="nsew")
 setpoint_entry = ctk.CTkEntry(frame_set, placeholder_text = "Ingrese referencia")
 setpoint_entry.grid(row=3, column=0, padx=30, sticky="nsew")
 setpoint_button = ctk.CTkButton(frame_set, text = "Actualizar Setpoint", command=update_setpoint)
 setpoint_button.grid(row=4, column=0, padx = 30, pady = 5, sticky="nsew")
 
 # Controladores PID
-ctk.CTkLabel(frame_set, text="Kp").grid(row=0, column=1, padx = (60, 10), sticky="nsew")
-Kp_entry = ctk.CTkEntry(frame_set, placeholder_text = "Kp")
-Kp_entry.grid(row = 1, column=1, padx = (60, 10), pady=(0, 5), sticky="sneww")
+ctk.CTkLabel(frame_set, text = "Ganancias de controlador PID", font=("Arial", 12, "bold")).grid(row=0, column=1, padx = (60, 10),  pady = 10, sticky = "nsew")
 
-ctk.CTkLabel(frame_set, text="Ki").grid(row=2, column=1, padx = (60, 10), sticky="nsew")
-Ki_entry = ctk.CTkEntry(frame_set, placeholder_text = "Ki")
-Ki_entry.grid(row=3, column=1, padx = (60, 10), pady=(0, 5), sticky="snew")
+kp_label = ctk.CTkLabel(frame_set, text="Kp: 0.0")
+kp_label.grid(row=1, column=1, padx = (60, 10), pady = (5, 0), sticky="nsew")
+Kp_slider = ctk.CTkSlider(frame_set, from_ = 0, to = 10, number_of_steps = 100,
+    command = lambda value: kp_label.configure(text = f"Kp: {value:.1f}")
+)
+Kp_slider.set(0)
+Kp_slider.grid(row = 2, column=1, padx = (60, 10), pady=(8, 8), sticky="nsew")
 
-ctk.CTkLabel(frame_set, text="Kd").grid(row=4, column=1, padx = (60, 10), sticky="nsew")
-Kd_entry = ctk.CTkEntry(frame_set, placeholder_text="Kd")
-Kd_entry.grid(row=5, column=1, padx = (60, 10), pady=(0, 5), sticky="nsew")
+ki_label = ctk.CTkLabel(frame_set, text = "Ki: 0.0")
+ki_label.grid(row = 3, column = 1, padx = (60, 10), pady = (5, 0), sticky="nsew")
+Ki_slider = ctk.CTkSlider(frame_set, from_ = 0, to = 10, number_of_steps = 100,
+    command = lambda value: ki_label.configure(text = f"Ki: {value:.1f}")
+)
+Ki_slider.set(0)
+Ki_slider.grid(row = 4, column=1, padx = (60, 10), pady=(12, 12), sticky="nsew")
 
-update_button = ctk.CTkButton(frame_set, text="Actualizar PID", command=update_pid)
-update_button.grid(row=6, column=1, padx = (60, 10), pady=10, sticky="nsew")
+kd_label = ctk.CTkLabel(frame_set, text="Kd: 0.0")
+kd_label.grid(row = 5, column=1, padx = (60, 10), pady = (5, 0), sticky="nsew")
+Kd_slider = ctk.CTkSlider(frame_set, from_ = 0, to = 10, number_of_steps = 100,
+    command = lambda value: kd_label.configure(text = f"Kd: {value:.1f}")
+)
+Kd_slider.set(0)
+Kd_slider.grid(row = 6, column=1, padx = (60, 10), pady=(0, 5), sticky="nsew")
 
-ctk.CTkLabel(frame_check, text="Esquemas de control", font=("Arial", 14, "bold")).grid(row=0, column=0, pady = 10, sticky = "snew")
+ctk.CTkLabel(frame_check, text="Esquemas de control", font=("Arial", 14, "bold")).grid(row=0, column=0, padx = 50,  pady = 10, sticky = "nsew")
 for i, (name, var) in enumerate(control_scheme_vars.items(), start = 1):
     ctk.CTkCheckBox(
         frame_check, text = name, variable=var, command=update_lines_visibility
-    ).grid(row = i, column = 0, sticky = "snew", padx=10, pady=5)
+    ).grid(row = i, column = 0, sticky = "snew", padx = 10, pady = 5)
 
 # Crear gráfica
 fig_closed_loop, ax_closed_loop = plt.subplots(figsize=(10, 8))
 ax_closed_loop.set_title("Esquemas de control para el sistema p53-Mdm2")
-ax_closed_loop.set_xlim(0, 100)
+ax_closed_loop.set_xlim(0, lengthGraph)
 ax_closed_loop.grid(color='gray', linestyle='--', linewidth=0.5)
-canvas_closed_loop = FigureCanvasTkAgg(fig_closed_loop, master = frame_plot)
-canvas_closed_loop.get_tk_widget().grid(row=0, column=0, padx = 10, pady = 10, sticky="nsew")
-lines = {name: ax_closed_loop.plot(time, data[name], label=name)[0] for name in data}
+setpoint_line, = ax_closed_loop.plot(time, np.ones_like(time)*setpoint, 'r--', label="Setpoint")
 
-# Configurar expansión dinámica de las filas y columnas en la pestaña
-# tab_closed_loop.grid_columnconfigure(0, weight=1)
-# tab_closed_loop.grid_columnconfigure(1, weight=1)
+lines = {name: ax_closed_loop.plot(time, data[name], label = name, visible = False)[0] for name in data}
+
+canvas_closed_loop = FigureCanvasTkAgg(fig_closed_loop, master = frame_plot)
+canvas_closed_loop.draw()
+canvas_closed_loop.get_tk_widget().grid(row=0, column=0, padx = 10, pady = 10, sticky="nsew")
+
 
 # Animación
-ani = FuncAnimation(fig_closed_loop, update, frames=np.arange(0, 100), interval=100) 
-plt.show()
-
+ani = FuncAnimation(fig_closed_loop, update, frames=step, interval = 10, blit = True) 
 root.mainloop()
